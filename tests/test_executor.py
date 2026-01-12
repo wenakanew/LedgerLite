@@ -139,3 +139,4 @@ def test_ledger_persistence():
         rows = db2.execute("SELECT * FROM users")
         assert len(rows) == 1
         assert rows[0]["id"] == 1
+

@@ -47,35 +47,10 @@ class DatabaseEngine:
 
 def main():
     """Start the REPL."""
-    print("LedgerLite - A Transaction-First Mini Relational Database System")
-    print("Version 0.1.0")
-    print()
-    print("Type 'exit' or 'quit' to exit")
-    print()
-    
-    db = DatabaseEngine()
-    
-    while True:
-        try:
-            query = input("ledgerlite> ").strip()
-            
-            if query.lower() in ['exit', 'quit']:
-                print("Goodbye!")
-                break
-            
-            if not query:
-                continue
-            
-            # TODO: Parse and execute query
-            result = db.execute(query)
-            print(result)
-            
-        except KeyboardInterrupt:
-            print("\nExiting...")
-            break
-        except Exception as e:
-            print(f"Error: {e}")
+    from src.repl import start_repl
+    start_repl()
 
 
 if __name__ == "__main__":
     main()
+

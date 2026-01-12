@@ -112,3 +112,4 @@ class LedgerEntry:
             old_value=data.get("old_value"),
             new_value=data.get("new_value")
         )
+

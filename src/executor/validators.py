@@ -177,3 +177,4 @@ def validate_constraints_for_update(
                 existing_rows,
                 unique_indexes
             )
+

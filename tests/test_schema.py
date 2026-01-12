@@ -59,3 +59,4 @@ def test_list_tables():
     assert len(tables) == 2
     assert "users" in tables
     assert "products" in tables
+

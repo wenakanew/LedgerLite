@@ -52,3 +52,4 @@ class JoinClause:
     table_name: str
     join_type: str  # "INNER"
     condition: Dict[str, str]  # {"left_col": "right_col"}
+

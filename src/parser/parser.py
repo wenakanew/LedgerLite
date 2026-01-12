@@ -278,13 +278,44 @@ class SQLParser:
         )
     
     def parse_where_clause(self) -> Dict[str, Any]:
-        """Parse WHERE clause."""
+        """Parse WHERE clause with support for AND/OR operators."""
         self.expect(TokenType.WHERE)
+        return self.parse_or_condition()
+    
+    def parse_or_condition(self) -> Dict[str, Any]:
+        """Parse OR condition (lowest precedence)."""
+        left = self.parse_and_condition()
         
-        # Simple WHERE: column = value
+        while self.current_token and self.current_token.type == TokenType.OR:
+            self.advance()
+            right = self.parse_and_condition()
+            left = {
+                "type": "OR",
+                "left": left,
+                "right": right
+            }
+        
+        return left
+    
+    def parse_and_condition(self) -> Dict[str, Any]:
+        """Parse AND condition (higher precedence than OR)."""
+        left = self.parse_simple_condition()
+        
+        while self.current_token and self.current_token.type == TokenType.AND:
+            self.advance()
+            right = self.parse_simple_condition()
+            left = {
+                "type": "AND",
+                "left": left,
+                "right": right
+            }
+        
+        return left
+    
+    def parse_simple_condition(self) -> Dict[str, Any]:
+        """Parse a simple condition: column operator value."""
         col_name = self.expect(TokenType.IDENTIFIER).value
         
-        # Operator
         if self.current_token.type == TokenType.EQUALS:
             operator = "="
             self.advance()
@@ -309,6 +340,7 @@ class SQLParser:
         value = self.parse_value()
         
         return {
+            "type": "CONDITION",
             "column": col_name,
             "operator": operator,
             "value": value
@@ -425,3 +457,4 @@ def parse_sql(sql: str) -> Any:
     tokens = lexer.tokenize()
     parser = SQLParser(tokens)
     return parser.parse()
+

@@ -222,3 +222,4 @@ class LedgerStore:
         if self.ledger_file.exists():
             self.ledger_file.unlink()
         self._transaction_counter = 0
+

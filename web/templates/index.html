@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LedgerLite - Web Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            margin-top: 20px;
+        }
+
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .result-table th,
+        .result-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .result-table th {
+            background: #f5f5f5;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .result-table tr:hover {
+            background: #f9f9f9;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .examples {
+            margin-top: 20px;
+        }
+
+        .example-btn {
+            display: inline-block;
+            background: #e9ecef;
+            color: #333;
+            padding: 8px 15px;
+            border-radius: 5px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            border: 1px solid #dee2e6;
+        }
+
+        .example-btn:hover {
+            background: #dee2e6;
+        }
+
+        .history {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-entry {
+            padding: 10px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+
+        .history-entry:last-child {
+            border-bottom: none;
+        }
+
+        .history-entry strong {
+            color: #667eea;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>LedgerLite</h1>
+            <p>A Transaction-First Mini Relational Database System</p>
+        </header>
+
+        <div class="main-content">
+            <div class="card full-width">
+                <h2>SQL Query Interface</h2>
+                <textarea id="query-input" placeholder="Enter SQL query here...&#10;&#10;Examples:&#10;CREATE TABLE users (id INT PRIMARY KEY, name TEXT);&#10;INSERT INTO users VALUES (1, 'Alice');&#10;SELECT * FROM users;"></textarea>
+                
+                <div class="examples">
+                    <strong>Quick Examples:</strong><br>
+                    <span class="example-btn" onclick="loadExample('CREATE TABLE users (id INT PRIMARY KEY, name TEXT, email TEXT UNIQUE);')">Create Table</span>
+                    <span class="example-btn" onclick="loadExample('INSERT INTO users VALUES (1, 'Alice', 'alice@example.com');')">Insert</span>
+                    <span class="example-btn" onclick="loadExample('SELECT * FROM users;')">Select All</span>
+                    <span class="example-btn" onclick="loadExample('UPDATE users SET name = 'Bob' WHERE id = 1;')">Update</span>
+                    <span class="example-btn" onclick="loadExample('DELETE FROM users WHERE id = 1;')">Delete</span>
+                </div>
+                
+                <button id="execute-btn" onclick="executeQuery()">Execute Query</button>
+                <div id="result"></div>
+            </div>
+
+            <div class="card">
+                <h2>Tables</h2>
+                <button onclick="loadTables()">Refresh Tables</button>
+                <div id="tables-list"></div>
+            </div>
+
+            <div class="card">
+                <h2>Transaction History</h2>
+                <button onclick="loadHistory()">Refresh History</button>
+                <div id="history" class="history"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function loadExample(query) {
+            document.getElementById('query-input').value = query;
+        }
+
+        async function executeQuery() {
+            const query = document.getElementById('query-input').value.trim();
+            const resultDiv = document.getElementById('result');
+            const executeBtn = document.getElementById('execute-btn');
+
+            if (!query) {
+                resultDiv.innerHTML = '<div class="message error">Please enter a query</div>';
+                return;
+            }
+
+            executeBtn.disabled = true;
+            executeBtn.innerHTML = 'Executing<span class="loading"></span>';
+
+            try {
+                const response = await fetch('/api/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    if (data.type === 'rows' && data.result.length > 0) {
+                        // Display as table
+                        let html = '<table class="result-table"><thead><tr>';
+                        const headers = Object.keys(data.result[0]);
+                        headers.forEach(header => {
+                            html += `<th>${header}</th>`;
+                        });
+                        html += '</tr></thead><tbody>';
+                        
+                        data.result.forEach(row => {
+                            html += '<tr>';
+                            headers.forEach(header => {
+                                html += `<td>${row[header] !== null ? row[header] : 'NULL'}</td>`;
+                            });
+                            html += '</tr>';
+                        });
+                        
+                        html += `</tbody></table><div class="message info">${data.row_count} row(s) returned</div>`;
+                        resultDiv.innerHTML = html;
+                    } else if (data.type === 'rows') {
+                        resultDiv.innerHTML = '<div class="message info">(0 rows)</div>';
+                    } else {
+                        resultDiv.innerHTML = `<div class="message success">${data.result}</div>`;
+                    }
+                } else {
+                    resultDiv.innerHTML = `<div class="message error">${data.error}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="message error">Error: ${error.message}</div>`;
+            } finally {
+                executeBtn.disabled = false;
+                executeBtn.innerHTML = 'Execute Query';
+            }
+
+            // Refresh tables and history after query
+            loadTables();
+            loadHistory();
+        }
+
+        async function loadTables() {
+            try {
+                const response = await fetch('/api/tables');
+                const data = await response.json();
+
+                if (data.success) {
+                    const tablesDiv = document.getElementById('tables-list');
+                    if (data.tables.length === 0) {
+                        tablesDiv.innerHTML = '<div class="message info">No tables yet</div>';
+                    } else {
+                        let html = '<ul style="list-style: none; padding: 0;">';
+                        data.tables.forEach(table => {
+                            html += `<li style="padding: 8px; border-bottom: 1px solid #e0e0e0;"><strong>${table}</strong></li>`;
+                        });
+                        html += '</ul>';
+                        tablesDiv.innerHTML = html;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading tables:', error);
+            }
+        }
+
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/history');
+                const data = await response.json();
+
+                if (data.success) {
+                    const historyDiv = document.getElementById('history');
+                    if (data.entries.length === 0) {
+                        historyDiv.innerHTML = '<div class="message info">No transaction history</div>';
+                    } else {
+                        let html = '';
+                        data.entries.slice().reverse().forEach(entry => {
+                            html += `
+                                <div class="history-entry">
+                                    <strong>T${entry.transaction_id}</strong> | 
+                                    ${entry.operation} | 
+                                    <strong>${entry.table_name}</strong> | 
+                                    ${new Date(entry.timestamp).toLocaleString()}
+                                </div>
+                            `;
+                        });
+                        historyDiv.innerHTML = html;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading history:', error);
+            }
+        }
+
+        // Allow Ctrl+Enter to execute query
+        document.getElementById('query-input').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                executeQuery();
+            }
+        });
+
+        // Load tables and history on page load
+        loadTables();
+        loadHistory();
+    </script>
+</body>
+</html>

@@ -287,3 +287,4 @@ class Lexer:
         
         tokens.append(Token(TokenType.EOF, "", self.line, self.column))
         return tokens
+

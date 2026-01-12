@@ -189,3 +189,14 @@ class IndexManager:
         # Rebuild indexes
         for row in rows:
             self.add_row(table, row)
+    
+    def rebuild_indexes_for_table(self, table: Table, rows: List[Dict[str, Any]]) -> None:
+        """
+        Alias for rebuild_indexes for consistency.
+        
+        Args:
+            table: Table schema
+            rows: List of rows to index
+        """
+        self.rebuild_indexes(table, rows)
+

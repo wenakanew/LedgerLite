@@ -129,3 +129,4 @@ def validate_row(row: Dict[str, Any], table: Table) -> None:
         # Check primary key is not None
         if column.is_primary_key and row[column.name] is None:
             raise ValueError(f"Primary key column {column.name} cannot be NULL")
+

@@ -80,3 +80,13 @@ class SchemaManager:
         if table_name not in self._tables:
             raise ValueError(f"Table '{table_name}' does not exist")
         del self._tables[table_name]
+    
+    def get_all_tables(self) -> list[Table]:
+        """
+        Get all registered table schemas.
+        
+        Returns:
+            List of all Table objects
+        """
+        return list(self._tables.values())
+

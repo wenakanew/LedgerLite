@@ -106,3 +106,4 @@ def test_reconstruct_state_with_primary_key():
         assert len(state) == 1
         assert state[0]["id"] == 1
         assert state[0]["name"] == "Alice Updated"
+

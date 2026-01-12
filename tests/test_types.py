@@ -78,3 +78,4 @@ def test_ledger_entry_serialization():
     restored = LedgerEntry.from_dict(entry_dict)
     assert restored.transaction_id == entry.transaction_id
     assert restored.operation == entry.operation
+

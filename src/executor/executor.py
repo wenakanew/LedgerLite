@@ -160,11 +160,7 @@ class QueryExecutor:
             primary_key_col.name
         )
         
-        # Apply WHERE clause filtering
-        if stmt.where_clause:
-            rows = self._apply_where_clause(rows, stmt.where_clause)
-        
-        # Handle JOINs
+        # Handle JOINs first (WHERE might reference joined tables)
         if stmt.joins:
             for join in stmt.joins:
                 # Get joined table
@@ -177,6 +173,10 @@ class QueryExecutor:
                 
                 # Perform join
                 rows = self._execute_join(rows, join_rows, join.condition)
+        
+        # Apply WHERE clause filtering (after JOIN so it can reference joined columns)
+        if stmt.where_clause:
+            rows = self._apply_where_clause(rows, stmt.where_clause)
         
         # Project columns
         if stmt.columns == ["*"]:
@@ -334,42 +334,101 @@ class QueryExecutor:
     ) -> List[Dict[str, Any]]:
         """
         Apply WHERE clause filtering to rows.
+        Supports simple conditions and compound AND/OR conditions.
         
         Args:
             rows: List of rows to filter
-            where_clause: WHERE clause specification
+            where_clause: WHERE clause specification (can be simple or compound)
             
         Returns:
             Filtered rows
         """
-        column = where_clause["column"]
-        operator = where_clause["operator"]
-        value = where_clause["value"]
-        
         result = []
         for row in rows:
-            row_value = row.get(column)
-            
-            if operator == "=":
-                if row_value == value:
-                    result.append(row)
-            elif operator == "!=":
-                if row_value != value:
-                    result.append(row)
-            elif operator == ">":
-                if row_value is not None and value is not None and row_value > value:
-                    result.append(row)
-            elif operator == "<":
-                if row_value is not None and value is not None and row_value < value:
-                    result.append(row)
-            elif operator == ">=":
-                if row_value is not None and value is not None and row_value >= value:
-                    result.append(row)
-            elif operator == "<=":
-                if row_value is not None and value is not None and row_value <= value:
-                    result.append(row)
-        
+            if self._evaluate_where_condition(row, where_clause):
+                result.append(row)
         return result
+    
+    def _evaluate_where_condition(
+        self,
+        row: Dict[str, Any],
+        condition: Dict[str, Any]
+    ) -> bool:
+        """
+        Evaluate a WHERE condition against a single row.
+        Handles simple conditions, AND, and OR operators.
+        
+        Args:
+            row: Row to evaluate
+            condition: Condition specification
+            
+        Returns:
+            True if row matches condition, False otherwise
+        """
+        condition_type = condition.get("type")
+        
+        if condition_type == "CONDITION":
+            # Simple condition: column operator value
+            return self._evaluate_simple_condition(row, condition)
+        
+        elif condition_type == "AND":
+            # Both left and right must be true
+            left_result = self._evaluate_where_condition(row, condition["left"])
+            right_result = self._evaluate_where_condition(row, condition["right"])
+            return left_result and right_result
+        
+        elif condition_type == "OR":
+            # Either left or right must be true
+            left_result = self._evaluate_where_condition(row, condition["left"])
+            right_result = self._evaluate_where_condition(row, condition["right"])
+            return left_result or right_result
+        
+        else:
+            # Fallback for backwards compatibility with old format
+            # Old format: {"column": ..., "operator": ..., "value": ...}
+            return self._evaluate_simple_condition(row, condition)
+    
+    def _evaluate_simple_condition(
+        self,
+        row: Dict[str, Any],
+        condition: Dict[str, Any]
+    ) -> bool:
+        """
+        Evaluate a simple condition (column operator value) against a row.
+        
+        Args:
+            row: Row to evaluate
+            condition: Simple condition specification
+            
+        Returns:
+            True if row matches condition, False otherwise
+        """
+        column = condition["column"]
+        operator = condition["operator"]
+        value = condition["value"]
+        
+        # Extract column name from table.column format if present
+        # After JOIN, columns are merged without table prefix
+        col_name = column.split('.')[-1] if '.' in column else column
+        
+        # After JOIN, try column name first (columns are merged without prefix)
+        # Fall back to table.column format if that doesn't work
+        row_value = row.get(col_name) or row.get(column)
+        
+        if operator == "=":
+            return row_value == value
+        elif operator == "!=":
+            return row_value != value
+        elif operator == ">":
+            return row_value is not None and value is not None and row_value > value
+        elif operator == "<":
+            return row_value is not None and value is not None and row_value < value
+        elif operator == ">=":
+            return row_value is not None and value is not None and row_value >= value
+        elif operator == "<=":
+            return row_value is not None and value is not None and row_value <= value
+        else:
+            return False
     
     def _execute_join(
         self,
@@ -383,7 +442,7 @@ class QueryExecutor:
         Args:
             left_rows: Rows from left table
             right_rows: Rows from right table
-            condition: Join condition mapping
+            condition: Join condition mapping (can be table.column format)
             
         Returns:
             Joined rows
@@ -394,8 +453,15 @@ class QueryExecutor:
             for right_row in right_rows:
                 # Check join condition
                 match = True
-                for left_col, right_col in condition.items():
-                    if left_row.get(left_col) != right_row.get(right_col):
+                for left_col_spec, right_col_spec in condition.items():
+                    # Extract column name from table.column format if present
+                    left_col = left_col_spec.split('.')[-1] if '.' in left_col_spec else left_col_spec
+                    right_col = right_col_spec.split('.')[-1] if '.' in right_col_spec else right_col_spec
+                    
+                    left_value = left_row.get(left_col)
+                    right_value = right_row.get(right_col)
+                    
+                    if left_value != right_value:
                         match = False
                         break
                 
@@ -405,3 +471,4 @@ class QueryExecutor:
                     results.append(merged_row)
         
         return results
+

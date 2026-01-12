@@ -90,8 +90,9 @@ def test_parse_select_with_join():
     assert len(stmt.joins) == 1
     assert stmt.joins[0].table_name == "orders"
     assert stmt.joins[0].join_type == "INNER"
-    assert "id" in stmt.joins[0].condition
-    assert stmt.joins[0].condition["id"] == "user_id"
+    # Join condition keys are in table.column format
+    assert "users.id" in stmt.joins[0].condition
+    assert stmt.joins[0].condition["users.id"] == "orders.user_id"
 
 
 def test_parse_update():
@@ -143,3 +144,77 @@ def test_parse_error_missing_table_name():
     """Test that missing table name raises error."""
     with pytest.raises(ParserError):
         parse_sql("CREATE TABLE (id INT PRIMARY KEY)")
+
+
+def test_parse_select_with_where_and():
+    """Test parsing SELECT with AND operator in WHERE clause."""
+    sql = "SELECT * FROM users WHERE id = 1 AND name = 'Alice'"
+    stmt = parse_sql(sql)
+    
+    assert stmt.where_clause is not None
+    assert stmt.where_clause["type"] == "AND"
+    assert stmt.where_clause["left"]["type"] == "CONDITION"
+    assert stmt.where_clause["left"]["column"] == "id"
+    assert stmt.where_clause["left"]["value"] == 1
+    assert stmt.where_clause["right"]["type"] == "CONDITION"
+    assert stmt.where_clause["right"]["column"] == "name"
+    assert stmt.where_clause["right"]["value"] == "Alice"
+
+
+def test_parse_select_with_where_or():
+    """Test parsing SELECT with OR operator in WHERE clause."""
+    sql = "SELECT * FROM users WHERE id = 1 OR id = 2"
+    stmt = parse_sql(sql)
+    
+    assert stmt.where_clause is not None
+    assert stmt.where_clause["type"] == "OR"
+    assert stmt.where_clause["left"]["column"] == "id"
+    assert stmt.where_clause["left"]["value"] == 1
+    assert stmt.where_clause["right"]["column"] == "id"
+    assert stmt.where_clause["right"]["value"] == 2
+
+
+def test_parse_select_with_where_and_or():
+    """Test parsing SELECT with mixed AND/OR (AND has higher precedence)."""
+    sql = "SELECT * FROM users WHERE id = 1 AND name = 'Alice' OR id = 2"
+    stmt = parse_sql(sql)
+    
+    assert stmt.where_clause is not None
+    assert stmt.where_clause["type"] == "OR"
+    # Left side should be the AND
+    assert stmt.where_clause["left"]["type"] == "AND"
+    # Right side should be the simple condition
+    assert stmt.where_clause["right"]["type"] == "CONDITION"
+
+
+def test_parse_select_with_where_chained_and():
+    """Test parsing SELECT with chained AND operators."""
+    sql = "SELECT * FROM users WHERE id = 1 AND name = 'Alice' AND age > 25"
+    stmt = parse_sql(sql)
+    
+    assert stmt.where_clause is not None
+    assert stmt.where_clause["type"] == "AND"
+    # Left side should be another AND
+    assert stmt.where_clause["left"]["type"] == "AND"
+    # Right side should be a condition
+    assert stmt.where_clause["right"]["type"] == "CONDITION"
+    assert stmt.where_clause["right"]["operator"] == ">"
+
+
+def test_parse_update_with_where_and():
+    """Test parsing UPDATE with AND in WHERE clause."""
+    sql = "UPDATE users SET name = 'Bob' WHERE id = 1 AND status = 'active'"
+    stmt = parse_sql(sql)
+    
+    assert stmt.where_clause is not None
+    assert stmt.where_clause["type"] == "AND"
+
+
+def test_parse_delete_with_where_or():
+    """Test parsing DELETE with OR in WHERE clause."""
+    sql = "DELETE FROM users WHERE id = 1 OR id = 2"
+    stmt = parse_sql(sql)
+    
+    assert stmt.where_clause is not None
+    assert stmt.where_clause["type"] == "OR"
+
